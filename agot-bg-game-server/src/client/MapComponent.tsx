@@ -22,6 +22,7 @@ import ConditionalWrap from "./utils/ConditionalWrap";
 import BetterMap from "../utils/BetterMap";
 import _ from "lodash";
 import PartialRecursive from "../utils/PartialRecursive";
+import PlaceOrdersGameState from "../common/ingame-game-state/planning-game-state/place-orders-game-state/PlaceOrdersGameState";
 
 
 interface MapComponentProps {
@@ -142,8 +143,8 @@ export default class MapComponent extends Component<MapComponentProps> {
 
         return propertiesForOrders.map((region, properties) => {
 
-            if (this.props.ingameGameState.childGameState instanceof PlanningGameState) {
-                const planningGameState = this.props.ingameGameState.childGameState;
+            if (this.props.ingameGameState.childGameState instanceof PlanningGameState && this.props.ingameGameState.childGameState.childGameState instanceof PlaceOrdersGameState) {
+                const planningGameState = this.props.ingameGameState.childGameState.childGameState;
                 const orderPresent = planningGameState.placedOrders.has(region);
                 const order = orderPresent ? planningGameState.placedOrders.get(region) : null;
 

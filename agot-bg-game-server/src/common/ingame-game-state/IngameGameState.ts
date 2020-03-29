@@ -44,8 +44,8 @@ export default class IngameGameState extends GameState<
         super(entireGame);
     }
 
-    beginGame(futurePlayers: BetterMap<string, User>): void {
-        this.game = createGame(this.entireGame, futurePlayers.keys);
+    beginGame(housesToCreate: string[], futurePlayers: BetterMap<string, User>): void {
+        this.game = createGame(this.entireGame, housesToCreate);
         this.players = new BetterMap(futurePlayers.map((house, user) => [user, new Player(user, this.game.houses.get(house))]));
 
         this.beginNewTurn();
@@ -118,13 +118,51 @@ export default class IngameGameState extends GameState<
     }
 
     getControllerOfHouse(house: House): Player {
-        const player = this.players.values.find(p => p.house == house);
+        if (this.isVassalHouse(house)) {
+            const suzerainHouse = house.suzerainHouse;
 
-        if (player == null) {
-            throw new Error();
+            if (suzerainHouse == null) {
+                throw new Error();
+            }
+
+            return this.getControllerOfHouse(house);
+        } else {
+            const player = this.players.values.find(p => p.house == house);
+
+            if (player == null) {
+                throw new Error();
+            }
+
+            return player;
+        }
+    }
+
+    getNextInTurnOrder(house: House | null, except: House | null = null): House {
+        const turnOrder = this.game.getTurnOrder();
+
+        if (house == null) {
+            return turnOrder[0];
         }
 
-        return player;
+        const i = turnOrder.indexOf(house);
+
+        const nextHouse = turnOrder[(i + 1) % turnOrder.length];
+
+        if (nextHouse == except) {
+            return this.getNextInTurnOrder(nextHouse);
+        }
+
+        return nextHouse;
+    }
+
+    getNextNonVassalInTurnOrder(house: House | null): House {
+        house = this.getNextInTurnOrder(house);
+
+        if (!this.isVassalHouse(house)) {
+            return house;
+        } else {
+            return this.getNextNonVassalInTurnOrder(house);
+        }
     }
 
     checkVictoryConditions(): boolean {
@@ -201,6 +239,7 @@ export default class IngameGameState extends GameState<
             this.game.turn++;
             this.game.valyrianSteelBladeUsed = false;
             this.world.regions.forEach(r => r.units.forEach(u => u.wounded = false));
+            this.getVassalHouses().forEach(h => h.suzerainHouse = null);
         } else if (message.type == "add-game-log") {
             this.gameLogManager.logs.push({data: message.data, time: new Date(message.time * 1000)});
         } else if (message.type == "change-tracker") {
@@ -219,6 +258,22 @@ export default class IngameGameState extends GameState<
         } else {
             this.childGameState.onServerMessage(message);
         }
+    }
+
+    getVassalHouses(): House[] {
+        return this.game.houses.values.filter(h => this.isVassalHouse(h));
+    }
+
+    getNonClaimedVassalHouses(): House[] {
+        return this.getVassalHouses().filter(h => h.suzerainHouse == null);
+    }
+
+    isVassalHouse(house: House): boolean {
+        return !this.players.values.map(p => p.house).includes(house);
+    }
+
+    getTurnOrderWithoutVassals(): House[] {
+        return this.game.getTurnOrder().filter(h => !this.isVassalHouse(h));
     }
 
     serializeToClient(user: User | null): SerializedIngameGameState {

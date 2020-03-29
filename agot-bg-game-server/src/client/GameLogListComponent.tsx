@@ -905,6 +905,15 @@ export default class GameLogListComponent extends Component<GameLogListComponent
                             </tr>))}
                     </table>
                 </>);
+
+            case "vassals-claimed":
+                const vassals = data.vassals.map(hid => this.game.houses.get(hid));
+                house = this.game.houses.get(data.house);
+
+                return <>
+                    <b>{house.name}</b> claimed {joinReactNodes(vassals.map(v => <b key={v.id}>{v.name}</b>), ", ")} as
+                    vassal{vassals.length > 0 && "s"}.
+                </>;
         }
     }
 }

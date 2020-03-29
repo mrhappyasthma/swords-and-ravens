@@ -93,24 +93,6 @@ export default class Game {
         return track.indexOf(first) < track.indexOf(second);
     }
 
-    getNextInTurnOrder(house: House | null, except: House | null = null): House {
-        const turnOrder = this.getTurnOrder();
-
-        if (house == null) {
-            return turnOrder[0];
-        }
-
-        const i = turnOrder.indexOf(house);
-
-        const nextHouse = turnOrder[(i + 1) % turnOrder.length];
-
-        if (nextHouse == except) {
-            return this.getNextInTurnOrder(nextHouse);
-        }
-
-        return nextHouse;
-    }
-
     areVictoryConditionsFulfilled(): boolean {
         const numberStructuresPerHouse = this.houses.values.map(h => this.getTotalHeldStructures(h));
 
@@ -333,7 +315,7 @@ export default class Game {
         const game = new Game();
 
         game.lastUnitId = data.lastUnitId;
-        game.houses = new BetterMap(data.houses.map(h => [h.id, House.deserializeFromServer(h)]));
+        game.houses = new BetterMap(data.houses.map(h => [h.id, House.deserializeFromServer(game, h)]));
         game.world = World.deserializeFromServer(game, data.world);
         game.turn = data.turn;
         game.ironThroneTrack = data.ironThroneTrack.map(hid => game.houses.get(hid));
